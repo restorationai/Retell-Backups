@@ -1,0 +1,488 @@
+{
+  "agent_id": "",
+  "channel": "voice",
+  "last_modification_timestamp": 1766864877872,
+  "agent_name": "Outbound Team Dispatch",
+  "response_engine": {
+    "type": "conversation-flow",
+    "version": 45,
+    "conversation_flow_id": "conversation_flow_d7cc6fc60737"
+  },
+  "webhook_url": "https://restorationai.app.n8n.cloud/webhook/no-answer-decline",
+  "webhook_timeout_ms": 10000,
+  "language": "en-US",
+  "data_storage_setting": "everything",
+  "opt_in_signed_url": false,
+  "post_call_analysis_data": [
+    {
+      "type": "boolean",
+      "name": "Communication Failure Dispatch Check",
+      "description": "Was the call dropped or disconnected before the agent could successfully obtain a definitive confirmation or rejection for immediate dispatch?\n\nOUTCOME DEFINITION\n- Yes (Failure): The communication check **failed**. The call disconnected before the agent successfully completed the primary objective of obtaining a definitive \"Yes/No\" response to the immediate dispatch question. (Flag this for required agent callback/re-dial).\n- No (Success): The communication check **did not fail**. The agent successfully obtained a definitive \"Yes\" or \"No\" response to the immediate dispatch question before the call ended. (Communication goal met)."
+    },
+    {
+      "type": "boolean",
+      "name": "Any Speech Detected",
+      "description": "Did the other party speak any words at all? Select 'false' if there was only silence, ringing, static, or background noise without speech."
+    }
+  ],
+  "version": 45,
+  "is_published": false,
+  "post_call_analysis_model": "gpt-4.1-mini",
+  "pii_config": {
+    "mode": "post_call",
+    "categories": []
+  },
+  "analysis_successful_prompt": "Evaluate whether the agent seems to have a successful call with the user, where the agent finishes the task, and the call was complete without being cutoff.",
+  "analysis_summary_prompt": "Write a 1-3 sentence summary of the call based on the call transcript. Should capture the important information and actions taken during the call.",
+  "voice_id": "11labs-Cimo",
+  "max_call_duration_ms": 3600000,
+  "interruption_sensitivity": 0.9,
+  "voicemail_option": {
+    "action": {
+      "type": "hangup"
+    }
+  },
+  "allow_user_dtmf": true,
+  "user_dtmf_options": {},
+  "conversationFlow": {
+    "conversation_flow_id": "conversation_flow_d7cc6fc60737",
+    "version": 45,
+    "global_prompt": "You are Alex, the lead dispatcher for {{companyName}}. You are speaking to {{techName}}, one of our field technicians. Your tone is professional, authoritative, and brief.\n\nCore Mandate: Job Acceptance\n\nYour ONLY goal is to confirm that {{techName}} accepts the emergency job at {{address}} (Job ID: {{job_id}}) and is deploying immediately.\n\nThis call will end as soon as you have a clear confirmation of acceptance or a rejection.\n\nCRITICAL INSTRUCTION: Tool Calling\n\n1. IF THEY ACCEPT:\n   Call the 'claimDispatchSlot' tool. You must populate the arguments using the EXACT values found in your context variables:\n   - dispatch_log_record_id: {{dispatch_log_record_id}}\n   - tech_record_id: {{tech_record_id}}\n   - airtable_base_id: {{airtable_base_id}}\n   - role: {{role}}\n\n2. IF THEY DECLINE (No, Busy, Sick, Unavailable):\n   Call the 'decline_dispatch' tool. You must populate the arguments using the EXACT values found in your context variables:\n   - dispatch_log_record_id: {{dispatch_log_record_id}}\n   - tech_record_id: {{tech_record_id}}\n   - role: {{role}}\n   - reason: [The specific reason they gave]\n\nDo not hallucinate these values. They are provided in your dynamic variables.\n\nCRITICAL INSTRUCTION: Reporting Job Details\n\nYou must convey these details clearly so the technician knows what equipment to bring:\n1. Source of Damage: {{sourceOfDamage}}\n2. Areas Affected: {{areasAffected}}\n3. Incident Context: {{incidentSummary}}\n\nSummarize these details efficiently in natural speech.\nExample:\nYOU SAY: We have a sewage backup affecting the basement. The water is standing.\n\nGuardrails:\n- Do Not Negotiate pay rates.\n- Do Not ask about personal life.\n- Do Not stay on the line after acceptance.\n- Do Not reveal you are an AI.\n\nCore Voice and Formatting Directives:\n1. Numerical Sequences: Speak addresses and IDs clearly.\n   - \"Job 1 0 0 1\" (One Zero Zero One).\n   - \"1 2 3 Main St\".\n2. Pausing: Use an em-dash (—) to pause.\n   - Correct: The job is at 5 5 0 Oak Avenue — are you available?\n3. No Internal Commands or verbal fillers like \"um\" or \"uh.\"\n\nTechnician Dispatch Information (For Reference):\nTechnician Name: {{techName}}\nJob ID: {{job_id}}\nJob Address: {{address}}\nSource of Damage: {{sourceOfDamage}}\nAreas Affected: {{areasAffected}}\nIncident Summary: {{incidentSummary}}",
+    "nodes": [
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nYour goal is to assume the person answering is {{techName}}. You must immediately state the location of the job and ask for a binary confirmation of availability.\n\nCRITICAL VOICE INSTRUCTION: When addressing the technician, use only their first name. To do this, assume the first word of the variable {{techName}} is the first name.\n\nDialogue to Generate\n1. Greeting & Location: \"Hi [First Name], you have a new dispatch to {{address}}.\"\n2. The Ask: \"Please confirm you are available.\"\n\nWait for the user to say \"Yes\" or \"No\"."
+        },
+        "name": "Get Confirmation from Tech",
+        "edges": [
+          {
+            "destination_node_id": "node-1763503859127",
+            "id": "edge-1",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User says yes or confirms"
+            }
+          },
+          {
+            "destination_node_id": "node-1763140805856",
+            "id": "edge-1763140596654-cmvq36hum",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User says no or they're not available"
+            }
+          }
+        ],
+        "start_speaker": "agent",
+        "id": "start-node-1763131617587",
+        "type": "conversation",
+        "display_position": {
+          "x": 406.90108758526117,
+          "y": 44.90990395541196
+        }
+      },
+      {
+        "name": "End Call",
+        "id": "end-call-node-1763131617587",
+        "type": "end",
+        "display_position": {
+          "x": 3183.941263843798,
+          "y": 405.93562675319515
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "Politely end the call"
+        }
+      },
+      {
+        "name": "Conversation",
+        "edges": [
+          {
+            "id": "edge-1763134142391-j8cc6fvgx",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Describe the transition condition"
+            }
+          }
+        ],
+        "id": "node-1763134142391",
+        "type": "conversation",
+        "display_position": {
+          "x": 740.3522037399441,
+          "y": -906.6422041472995
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nYour goal is to verify {{tech_name}} picked up and get a verbal confirmation that they are ready to work.\n\nDialogue to Generate\n1. Greeting: \"Hi {{tech_name}}, this is Dispatch.\"\n2. The Ask: \"Can you please confirm you are available for immediate dispatch?\"\n\nWait for the user to say \"Yes\" or \"No\"."
+        }
+      },
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nThe technician has confirmed they are available. Your goal is to read the location and the problem summary clearly, state that text details were sent, and end the call. Do not ask if they have questions. This is a one-way notification.\n\nDialogue to Generate\n1. Confirmation: \"Okay, confirmed.\"\n3. Incident: \"To summarize the report: [Read {{incidentSummary}} as a clear, simple sentence].\"\n4. The Handoff: \"All details have also been provided to you via text.\"\n5. Closing: \"Please head there now and report to your project manager. Goodbye.\"\n\nEnd the call immediately after speaking."
+        },
+        "name": "Provide New Assignment Details",
+        "edges": [
+          {
+            "id": "edge-1763134222302-fu14908xj",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Describe the transition condition"
+            }
+          }
+        ],
+        "id": "node-1763134222302",
+        "type": "conversation",
+        "display_position": {
+          "x": 1653.3769640999249,
+          "y": -354.2874234776293
+        },
+        "skip_response_edge": {
+          "destination_node_id": "end-call-node-1763131617587",
+          "id": "edge-1763140373014",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Skip response"
+          }
+        }
+      },
+      {
+        "instruction": {
+          "type": "static_text",
+          "text": "Goal\nYour goal is to verify {{techName}} picked up and get a verbal confirmation that they are ready to work.\n\nDialogue to Generate\n1. Greeting: \"Hi {{tech_name}}, this is {{companyName}}.\"\n2. Location: \"You have a new dispatch to {{address}}.\"\n3. The Ask: \"Can you please confirm you are available for immediate dispatch?\"\n\nWait for the user to say \"Yes\" or \"No\"."
+        },
+        "name": "Get Confirmation from Tech",
+        "edges": [
+          {
+            "id": "edge-1763140568212-0-jhv4znjrl",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User says yes or confirms"
+            }
+          }
+        ],
+        "start_speaker": "agent",
+        "id": "node-1763140568212",
+        "type": "conversation",
+        "display_position": {
+          "x": 1092.2061358815504,
+          "y": -1510.592095681865
+        }
+      },
+      {
+        "name": "Clarify Unavailability",
+        "edges": [
+          {
+            "destination_node_id": "node-1763140899482",
+            "id": "edge-1763140805856-5oko78esh",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User mentions another job, traffic, lack of tools, or any other work related reason"
+            }
+          },
+          {
+            "destination_node_id": "node-1763140924360",
+            "id": "edge-1763140863126-9ubju1uoz",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User mentions personal issues, tiredness, family, pets, or lack of motivation"
+            }
+          }
+        ],
+        "id": "node-1763140805856",
+        "type": "conversation",
+        "display_position": {
+          "x": 898.7688746558788,
+          "y": 772.7724835070801
+        },
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nThe technician has stated they are not available. Your goal is to ask for the specific reason why they cannot take the dispatch.\n\nDialogue to Generate\n1. The Question: \"What is the reason you are unavailable right now?\"\n\nWait for the user to explain."
+        }
+      },
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nThe technician has provided a valid work-related reason (e.g., stuck on another job). Your goal is to accept this without pressure and end the call professionally so we can dispatch someone else.\n\nDialogue to Generate\n1. Accept: \"Okay, thank you for letting us know.\"\n2. Next Step: \"We will update your status and find another technician.\"\n3. Closing: \"Goodbye.\"\n\nEnd the call immediately."
+        },
+        "name": "Acknowledge Work Reason",
+        "edges": [
+          {
+            "id": "edge-1763140899482-vxch59t6u",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Describe the transition condition"
+            }
+          }
+        ],
+        "id": "node-1763140899482",
+        "type": "conversation",
+        "display_position": {
+          "x": 1674.384498440618,
+          "y": 601.7669593877306
+        },
+        "skip_response_edge": {
+          "destination_node_id": "node-1763663945799",
+          "id": "edge-1763141065522",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Skip response"
+          }
+        }
+      },
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nThe technician gave a personal or non-valid reason. Your goal is to firmly remind them of their contractual obligation to accept emergency dispatches. Do not negotiate, just state the expectation.\n\nDialogue to Generate\n1. Firm Pushback: \"I need to remind you that as an on-call technician, you are contractually required to accept emergency dispatches.\"\n2. The Consequence: \"I will mark this refusal in your file and notify the Project Manager immediately.\"\n3. Closing: \"We will find someone else. Goodbye.\"\n\nEnd the call immediately."
+        },
+        "name": "Pushback on Personal Reason",
+        "edges": [
+          {
+            "id": "edge-1763140924360-sizw5rp8c",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Describe the transition condition"
+            }
+          }
+        ],
+        "id": "node-1763140924360",
+        "type": "conversation",
+        "display_position": {
+          "x": 1667.517108731283,
+          "y": 1083.8435608764967
+        },
+        "skip_response_edge": {
+          "destination_node_id": "node-1763663945799",
+          "id": "edge-1763141067802",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Skip response"
+          }
+        }
+      },
+      {
+        "tool_id": "tool-1763503857125",
+        "name": "Claimdispatchslot",
+        "edges": [
+          {
+            "destination_node_id": "node-1763134222302",
+            "id": "edge-1763503955079-p017ymfz0",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Function output returns 'success' result"
+            }
+          },
+          {
+            "destination_node_id": "node-1763504725319",
+            "id": "edge-1763504058652-s293m0rne",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Function output returns 'taken' result"
+            }
+          }
+        ],
+        "id": "node-1763503859127",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": false,
+        "display_position": {
+          "x": 961.8448350553512,
+          "y": 75.74224528670732
+        },
+        "wait_for_result": true
+      },
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal The system indicates the job was claimed by another technician during the conversation. Your goal is to inform the user that the slot is filled, apologize briefly, and end the call. Do not negotiate.\n\nDialogue to Generate\n\n1. Notification: \"Ah, I apologize. It looks like another technician just accepted this dispatch while we were talking.\"\n2. Confirmation: \"The slot is now filled.\"\n3. Closing: \"Thank you for picking up. Goodbye.\"\n\nEnd the call immediately after speaking."
+        },
+        "name": "Job Already Taken",
+        "edges": [
+          {
+            "id": "edge-1763504725319-pnfk8a96e",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "Describe the transition condition"
+            }
+          }
+        ],
+        "id": "node-1763504725319",
+        "type": "conversation",
+        "display_position": {
+          "x": 1656.0438431239522,
+          "y": 127.52535924316972
+        },
+        "skip_response_edge": {
+          "destination_node_id": "end-call-node-1763131617587",
+          "id": "edge-1763504800768",
+          "transition_condition": {
+            "type": "prompt",
+            "prompt": "Skip response"
+          }
+        }
+      },
+      {
+        "tool_id": "tool-1763663943902",
+        "name": "Declinedispatch",
+        "edges": [
+          {
+            "destination_node_id": "end-call-node-1763131617587",
+            "id": "edge-1763664033472-6n8daakqj",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "The tool 'Declinedispatch' is executed."
+            }
+          }
+        ],
+        "id": "node-1763663945799",
+        "type": "function",
+        "tool_type": "local",
+        "speak_during_execution": false,
+        "display_position": {
+          "x": 2252.5812673165237,
+          "y": 935.8678399499782
+        },
+        "wait_for_result": true
+      },
+      {
+        "instruction": {
+          "type": "prompt",
+          "text": "Goal\nYour goal is to assume the person answering is {{techName}}. You must immediately state the location of the job and ask for a binary confirmation of availability.\n\nDialogue to Generate\n1. Greeting & Location: \"Hi {{techName}}, you have a new dispatch to {{address}}.\"\n2. The Ask: \"Please confirm you are available.\"\n\nWait for the user to say \"Yes\" or \"No\"."
+        },
+        "name": "Get Confirmation from Tech",
+        "edges": [
+          {
+            "id": "edge-1764549618075-0-eunhbzduy",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User says yes or confirms"
+            }
+          },
+          {
+            "id": "edge-1764549618075-1-3uuigqh7e",
+            "transition_condition": {
+              "type": "prompt",
+              "prompt": "User says no or they're not available"
+            }
+          }
+        ],
+        "start_speaker": "agent",
+        "id": "node-1764549618075",
+        "type": "conversation",
+        "display_position": {
+          "x": 448.787824601582,
+          "y": -557.8948042638394
+        }
+      }
+    ],
+    "start_node_id": "start-node-1763131617587",
+    "start_speaker": "user",
+    "tools": [
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "Claims the open Lead or Assistant dispatch slot for the current emergency job after the technician explicitly confirms availability.",
+        "type": "custom",
+        "url": "https://restorationai.app.n8n.cloud/webhook/dispatch-claim-receiver",
+        "tool_id": "tool-1763503857125",
+        "args_at_root": false,
+        "timeout_ms": 120000,
+        "name": "claimDispatchSlot",
+        "response_variables": {},
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "dispatch_log_record_id": {
+              "type": "string",
+              "description": "The unique Airtable record ID of the dispatch log entry (rec...) for the current job."
+            },
+            "role": {
+              "type": "string",
+              "description": "The role being claimed. Must be the value passed via metadata ('Lead' or 'Assistant')."
+            },
+            "airtable_base_id": {
+              "type": "string",
+              "description": "The ID of the client's Airtable Base where the job record is stored."
+            },
+            "tech_record_id": {
+              "type": "string",
+              "description": "The unique Airtable record ID of the technician who is accepting the assignment."
+            },
+            "job_id": {
+              "type": "string",
+              "description": "The friendly Job ID (e.g. 25Cs...) used for reference."
+            }
+          },
+          "required": [
+            "dispatch_log_record_id",
+            "tech_record_id",
+            "role",
+            "airtable_base_id",
+            "job_id"
+          ]
+        }
+      },
+      {
+        "headers": {},
+        "parameter_type": "json",
+        "method": "POST",
+        "query_params": {},
+        "description": "The technician explicitly declines the job, says they are unavailable, or cannot take the dispatch.",
+        "type": "custom",
+        "url": "https://restorationai.app.n8n.cloud/webhook/no-answer-decline",
+        "tool_id": "tool-1763663943902",
+        "args_at_root": false,
+        "timeout_ms": 120000,
+        "name": "declineDispatch",
+        "response_variables": {},
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "reason": {
+              "type": "string",
+              "description": "The reason given for declining (e.g., 'Busy', 'Sick', 'No equipment')."
+            },
+            "dispatch_log_record_id": {
+              "type": "string",
+              "description": "The unique Airtable record ID of the dispatch log entry (rec...) for the current job."
+            },
+            "role": {
+              "type": "string",
+              "description": "The role (Lead/Assistant)."
+            },
+            "tech_record_id": {
+              "type": "string",
+              "description": "The Airtable record ID of the technician declining."
+            },
+            "job_id": {
+              "type": "string",
+              "description": "The Airtable record ID of the job."
+            }
+          },
+          "required": [
+            "job_id",
+            "tech_record_id",
+            "dispatch_log_record_id",
+            "role"
+          ]
+        }
+      }
+    ],
+    "model_choice": {
+      "type": "cascading",
+      "model": "gpt-4.1"
+    },
+    "knowledge_base_ids": [],
+    "kb_config": {
+      "top_k": 3,
+      "filter_score": 0.6
+    },
+    "begin_tag_display_position": {
+      "x": 122,
+      "y": 333
+    },
+    "is_published": false
+  }
+}
